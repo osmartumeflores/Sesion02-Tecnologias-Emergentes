@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta Geolocalización OSM - UCSM</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; line-height: 1.6; }
+        fieldset { margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; }
+        input { margin: 5px; padding: 5px; width: 120px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { font-weight: bold; color: #2c3e50; }
+        .address { font-size: 0.9em; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h2>Consulta de Geolocalización OpenStreetMap</h2>
+
+    <fieldset>
+        <legend>Origen (Arequipa)</legend>
+        Lat: <input id="oLat" value="-16.414005">
+        Lon: <input id="oLon" value="-71.515773">
+        <p id="dirOrigen" class="address"></p>
+    </fieldset>
+
+    <fieldset>
+        <legend>Destino (Centro Arequipa)</legend>
+        Lat: <input id="dLat" value="-16.406547">
+        Lon: <input id="dLon" value="-71.553179">
+        <p id="dirDestino" class="address"></p>
+    </fieldset>
+
+    <button onclick="consultar()">Consultar Ruta y Direcciones</button>
+
+    <hr>
+    <div>
+        <p>Distancia: <span id="dist" class="result">---</span> km</p>
+        <p>Tiempo estimado: <span id="tiempo" class="result">---</span> min</p>
+    </div>
+
+    <p style="font-size:0.8em;color:#888">
+        Datos de <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>
+    </p>
+
+    <script>
+        const v = id => document.getElementById(id).value;
+        const set = (id, val) => document.getElementById(id).textContent = val;
+        const api = url => fetch(url).then(r => r.json());
+
+        async function consultar() {
+            set('dirOrigen', 'Cargando...');
+            set('dirDestino', 'Cargando...');
+
+            const [oLat, oLon, dLat, dLon] = [v('oLat'), v('oLon'), v('dLat'), v('dLon')];
+
+            try {
+                // 1. Geocodificación inversa
+                const gO = await api(`/api/geocode?lat=${oLat}&lon=${oLon}`);
+                const gD = await api(`/api/geocode?lat=${dLat}&lon=${dLon}`);
+
+                set('dirOrigen', gO.direccion || "No encontrada");
+                set('dirDestino', gD.direccion || "No encontrada");
+
+                // 2. Cálculo de ruta
+                const r = await api(`/api/ruta?oLat=${oLat}&oLon=${oLon}&dLat=${dLat}&dLon=${dLon}`);
+                
+                if (r.error) {
+                    alert("Error en la ruta: " + r.error);
+                } else {
+                    set('dist', r.distancia_km);
+                    set('tiempo', r.duracion_min);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error al conectar con el servidor local.");
+            }
+        }
+    </script>
+</body>
+</html>
